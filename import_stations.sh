@@ -1,0 +1,1 @@
+skygear-data-importer -e 'https://busmap.skygeario.com/' -k 'ee5e2fe67bd34e14ba0455a4c462aa3d' -t 'station' 'bus_stations.csv'

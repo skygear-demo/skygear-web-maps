@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+  <head>
+  <title>Bus Route Plotter</title>
+    <style>
+      /* Always set the map height explicitly to define the size of the div
+       * element that contains the map. */
+      #map {
+        height: 100%;
+      }
+      /* Optional: Makes the sample page fill the window. */
+      html, body {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+      }
+      .option-container {
+        margin-top: 40px;
+        margin-left: 10px;
+        position: fixed;
+        z-index:9999;
+      }
+      #route-options {
+        max-height:500px;
+        overflow: auto;
+      }
+    </style>
+    <link href="https://cdn.muicss.com/mui-0.9.27/css/mui.min.css" rel="stylesheet" type="text/css"
+     />
+     <script src="https://cdn.muicss.com/mui-0.9.27/js/mui.js"></script>
+  </head>
+  <body>
+    <div class="option-container">
+      <div class="mui-dropdown">
+        <button class="mui-btn mui-btn--danger mui-btn--small" data-mui-toggle="dropdown">
+          <span id="bus-now">Select a route</span>
+          <span class="mui-caret"></span>
+        </button>
+        <ul class="mui-dropdown__menu" id="route-options">
+        </ul>
+      </div>
+    </div>
+    <div id="map"></div>
+
+    <script src="https://code.skygear.io/js/polyfill/latest/polyfill.min.js"></script>
+    <script src="https://code.skygear.io/js/skygear/latest/skygear.min.js"></script>
+    <script src="app.js"></script>
+    <script async defer
+    src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDIiw8vosze_lKo_XjwtsGB5Q4SuHSBjD4&callback=initMap">
+    </script>
+
+  </body>
+</html>

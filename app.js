@@ -1,0 +1,139 @@
+var map;
+var openedBubble;
+var map;
+var displayedStationMarkers = [];
+
+var buslist = [ "1", "1A", "2", "2A", "2B", "2D", "2E", "2F", "2X", "3B", "3C", "3D", "3M", "3S", "3X", "5", "5A", "5C", "5D", "5M", "5P", "5R", "5X", "6", "6C", "6D", "6F", "6P", "7", "7B", "7M", "8", "8A", "8P", "9", "10", "11", "11B", "11C", "11D", "11K", "11X", "12", "12A", "13D", "13M", "13P", "13X", "14", "14B"];
+
+function initRouteOptions() {
+  routeOptionEl = document.getElementById("route-options");
+
+  for (var i in buslist) {
+    var s = `<a class="bus-option" href="#${buslist[i]}" data-route="${buslist[i]}">${buslist[i]}<a>`; // HTML string
+
+    var li = document.createElement('li');
+    li.innerHTML = s;
+    routeOptionEl.append(li);
+  }
+
+  var class_names= document.getElementsByClassName("bus-option");
+
+  for (var i = 0; i < class_names.length; i++) {
+      class_names[i].addEventListener('click', function(e) {
+        console.log(e);
+        var route = e.target.dataset["route"];
+        queryRoute(route);
+      }, false);
+  }
+}
+
+function initMap() {
+  map = new google.maps.Map(document.getElementById('map'), {
+    zoom: 2,
+    center: new google.maps.LatLng(2.8,-187.3),
+    mapTypeId: google.maps.MapTypeId.HYBRID
+  });
+}
+
+function removeMarkers() {
+  for (i in displayedStationMarkers) {
+    displayedStationMarkers[i].setMap(null);
+  }
+
+  displayedStationMarkers = [];
+}
+
+function renderStations(stations) {
+  removeMarkers();
+
+  var bounds  = new google.maps.LatLngBounds();
+
+  for(station of stations) {
+    console.log(station);
+    let marker = new google.maps.Marker({
+      position: new google.maps.LatLng(parseFloat(station.lat), parseFloat(station.lng)),
+      title: station.location_tc,
+      icon: './location_24x24.png'
+    });
+    loc = new google.maps.LatLng(marker.position.lat(), marker.position.lng());
+    //bounds.extend(loc);
+
+    var contentString = '<div id="content">'+
+        '<div id="siteNotice">'+
+        '</div>'+
+        '<h3 id="firstHeading" class="firstHeading">'+station.location_tc+'</h3>'+
+        '<div id="bodyContent">'+
+        '<p>'+station.location_en+'</p>'+
+        '</div>'+
+        '</div>';
+
+        var infowindow = new google.maps.InfoWindow({
+          content: contentString
+        });
+
+        bounds.extend(loc);
+        marker.bubble = infowindow;
+        marker.setMap(map);
+
+        marker.addListener('click', function() {
+          this.bubble.open(map, this);
+          if (openedBubble) {
+            openedBubble.close()
+          }
+          openedBubble = this.bubble;
+        });
+
+        displayedStationMarkers.push(marker);
+  }
+
+    map.fitBounds(bounds);
+    map.panToBounds(bounds);
+}
+
+function queryRoute(routeNo) {
+  const Note = skygear.Record.extend('station');
+  const query = new skygear.Query(Note);
+  query.equalTo('route', routeNo);
+  query.addAscending('seq');
+  skygear.publicDB.query(query).then((records) => {
+
+    if (records.length == 0) {
+      showAlert(`No records found for: ${routeNo}`);
+    } else {
+      renderStations(records);
+      var busNow= document.getElementById("bus-now");
+      busNow.innerHTML=`Stations for: ${routeNo}` ;
+    }
+  }, (error) => {
+    console.error(error);
+  });
+}
+
+function showAlert(message) {
+  // initialize modal element
+  var modalEl = document.createElement('div');
+  modalEl.style.width = '200px';
+  modalEl.style.height = '100px';
+  modalEl.style.margin = '100px auto';
+  modalEl.style.padding = '20px';
+  modalEl.style.backgroundColor = '#fff';
+  modalEl.innerHTML = `<p>${message}</p>`
+
+  // show modal
+  mui.overlay('on', modalEl);
+}
+
+function init () {
+  skygear.config({
+    'endPoint': 'https://busmap.skygeario.com/', // trailing slash is required
+    'apiKey': 'ee5e2fe67bd34e14ba0455a4c462aa3d',
+  }).then(() => {
+    console.log('skygear container is now ready for making API calls.');
+    queryRoute("12A");
+  }, (error) => {
+    console.error(error);
+  });
+}
+
+initRouteOptions();
+init();
