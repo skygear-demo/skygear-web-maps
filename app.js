@@ -20,7 +20,6 @@ function initRouteOptions() {
 
   for (var i = 0; i < class_names.length; i++) {
       class_names[i].addEventListener('click', function(e) {
-        console.log(e);
         var route = e.target.dataset["route"];
         queryRoute(route);
       }, false);
@@ -49,7 +48,6 @@ function renderStations(stations) {
   var bounds  = new google.maps.LatLngBounds();
 
   for(station of stations) {
-    console.log(station);
     let marker = new google.maps.Marker({
       position: new google.maps.LatLng(parseFloat(station.lat), parseFloat(station.lng)),
       title: station.location_tc,
@@ -64,7 +62,10 @@ function renderStations(stations) {
         '<h3 id="firstHeading" class="firstHeading">'+station.location_tc+'</h3>'+
         '<div id="bodyContent">'+
         '<p>'+station.location_en+'</p>'+
-        '</div>'+
+        '<ul class="comment-list"></ul>'+
+        '<form class="leave-msg">Leave Comment: <input type="text" class="message" />'+
+        '<br><button type="submit" class="message mui-btn--small mui-btn mui-btn--raised mui-btn--accent">Send</button>'+
+        '</form></div>'+
         '</div>';
 
         var infowindow = new google.maps.InfoWindow({
@@ -74,25 +75,93 @@ function renderStations(stations) {
         bounds.extend(loc);
         marker.bubble = infowindow;
         marker.setMap(map);
+        marker.station = station;
 
         marker.addListener('click', function() {
           this.bubble.open(map, this);
-          if (openedBubble) {
+          if (openedBubble && this.bubble != openedBubble) {
             openedBubble.close()
           }
           openedBubble = this.bubble;
+
+          var leaveMsg = document.querySelector(".leave-msg");
+          if (leaveMsg){
+            leaveMsg.addEventListener("submit", submitComment);
+            leaveMsg.setAttribute('data-station', this.station._id);
+          }
+
+          queryComments(this.station._id);
+        
         });
 
         displayedStationMarkers.push(marker);
   }
 
-    map.fitBounds(bounds);
-    map.panToBounds(bounds);
+  map.fitBounds(bounds);
+  map.panToBounds(bounds);
+}
+
+function submitComment(e) {
+  e.preventDefault();
+
+  var station = e.target.dataset["station"]
+  var messageEl = e.target.querySelector(".message");
+  var comment = messageEl.value;
+  messageEl.value = "";
+  saveComment(station, comment);
+}
+
+function queryComments(stationId) {
+
+  var commentList = document.querySelector("#bodyContent .comment-list");
+
+  // Remove list
+  while (commentList.firstChild) {
+    commentList.removeChild(commentList.firstChild);
+  }
+
+  const Comment = skygear.Record.extend('comment');
+  const query = new skygear.Query(Comment);
+  query.equalTo('station', stationId);
+  query.addAscending('_updated_at');
+
+  skygear.publicDB.query(query).then((records) => {
+    if (records.length == 0) {
+      var li = document.createElement('li');
+      li.textContent = "No Comments.";
+      commentList.appendChild(li);
+    } else {
+      var recordSize = records.length;
+      for (var i = 0; i < recordSize; i++) {
+        var li = document.createElement('li');
+        li.textContent = records[i].msg;
+        commentList.appendChild(li)
+      }
+    }
+  }, (error) => {
+    console.error(error);
+  });
+
+}
+
+function saveComment(stationId, msg) {
+  const Comment = skygear.Record.extend('comment');
+  const comment = new Comment({
+                      'msg': msg,
+                      'station': stationId
+                  });
+
+  skygear.publicDB.save(comment).then((record) => {
+      queryComments(stationId); // Reload the comment view
+    }, (error) => {
+      console.error(error);
+    });
+
 }
 
 function queryRoute(routeNo) {
-  const Note = skygear.Record.extend('station');
-  const query = new skygear.Query(Note);
+  const Station = skygear.Record.extend('station');
+  const query = new skygear.Query(Station);
   query.equalTo('route', routeNo);
   query.addAscending('seq');
   skygear.publicDB.query(query).then((records) => {
@@ -129,7 +198,10 @@ function init () {
     'apiKey': 'ee5e2fe67bd34e14ba0455a4c462aa3d',
   }).then(() => {
     console.log('skygear container is now ready for making API calls.');
-    queryRoute("12A");
+    skygear.auth.signupAnonymously().then(function(user, error){
+      queryRoute("12A");
+    });
+    
   }, (error) => {
     console.error(error);
   });
